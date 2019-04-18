@@ -66,12 +66,24 @@
             <h6 class="border-bottom border-gray pb-2"><b>Exports</b></h6>
             
             <div class="media text-muted pt-3" v-for="exp in datasetExports">
-              <div class="media-body pb-3 mb-0 small lh-125 border-bottom border-gray">
-                <div class="d-flex justify-content-between align-items-center w-100">
-                  <div class="text-gray-dark">
-                    <strong>Exported {{ exp.ago.length > 0 ? exp.ago : 0 + " seconds" }} ago</strong>
+              <div class="media-body lh-125 border-bottom border-gray">
+                  {{exp.id}}. Exported {{ exp.ago.length > 0 ? exp.ago : 0 + " seconds" }} ago
+                  <div style="display: inline">
+                    <span
+                      v-for="tag in exp.tags"
+                      class="badge badge-secondary"
+                      style="margin: 1px"
+                    >
+                      {{tag}}
+                    </span>
                   </div>
-                </div>
+                  <button 
+                    class="btn btn-sm btn-success"
+                    style="float: right; margin: 2px; padding: 2px"
+                    @click="downloadExport(exp.id)"
+                  >
+                    Download
+                  </button>
               </div>
             </div>
           </div>
@@ -200,7 +212,7 @@
         <button
           type="button"
           class="btn btn-dark btn-block"
-          @click="exportCOCO"
+          @click="exportModal"
         >
           <div v-if="exporting.id != null" class="progress">
             <div
@@ -240,6 +252,7 @@
         <PanelString name="Contains" v-model="query.file_name__icontains" @submit="updatePage" />
         <PanelToggle name="Show Annotated" v-model="panel.showAnnotated" />
         <PanelToggle name="Show Not Annotated" v-model="panel.showNotAnnotated" />
+        <PanelDropdown name="Order" v-model="order" :values="orderTypes" />
       </div>
     </div>
 
@@ -292,6 +305,7 @@
         </div>
       </div>
     </div>
+
     <div class="modal fade" tabindex="-1" role="dialog" id="cocoUpload">
       <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -334,17 +348,69 @@
         </div>
       </div>
     </div>
+
+    <div class="modal fade" tabindex="-1" role="dialog" id="exportDataset">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Export {{dataset.name}}</h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="form-group">
+                <label>Categories (Empty export all)</label>
+                <TagsInput
+                  v-model="exporting.categories"
+                  element-id="exportCategories"
+                  :existing-tags="categoryTags"
+                  :typeahead="true"
+                  :typeahead-activation-threshold="0"
+                ></TagsInput>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="exportCOCO"
+            >
+              Export
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import toastrs from "@/mixins/toastrs";
 import Dataset from "@/models/datasets";
+import Export from "@/models/exports";
 import ImageCard from "@/components/cards/ImageCard";
 import Pagination from "@/components/Pagination";
 import PanelString from "@/components/PanelInputString";
 import PanelToggle from "@/components/PanelToggle";
+import PanelDropdown from "@/components/PanelInputDropdown"
 import JQuery from "jquery";
+import TagsInput from "@/components/TagsInput";
+
 import { mapMutations } from "vuex";
 
 let $ = JQuery;
@@ -355,7 +421,9 @@ export default {
     ImageCard,
     Pagination,
     PanelString,
-    PanelToggle
+    PanelToggle,
+    PanelDropdown,
+    TagsInput
   },
   mixins: [toastrs],
   props: {
@@ -370,6 +438,7 @@ export default {
       generateLimit: 100,
       limit: 52,
       imageCount: 0,
+      categories: [],
       images: [],
       folders: [],
       dataset: {
@@ -384,7 +453,7 @@ export default {
       mouseDown: false,
       sidebar: {
         drag: false,
-        width: 300,
+        width: window.innerWidth * 0.2,
         canResize: false
       },
       scan: {
@@ -400,11 +469,18 @@ export default {
         id: null
       },
       exporting: {
+        categories: [],
         progress: 0,
         id: null
       },
       datasetExports: [],
       tab: "images",
+      order: "file_name",
+      orderTypes: {
+        file_name: "File Name",
+        id: "Id",
+        path: "File Path"
+      },
       query: {
         file_name__icontains: "",
         ...this.$route.query
@@ -435,16 +511,18 @@ export default {
         limit: this.limit,
         folder: this.folders.join("/"),
         ...this.query,
-        annotated: this.queryAnnotated
+        annotated: this.queryAnnotated,
+        order: this.order
       })
         .then(response => {
           let data = response.data;
 
           this.images = data.images;
           this.dataset = data.dataset;
+          this.categories = data.categories;
 
-          this.imageCount = data.pagination.total;
-          this.pages = data.pagination.pages;
+          this.imageCount = data.total;
+          this.pages = data.pages;
 
           this.subdirectories = data.subdirectories;
           // this.scan.id = data.scanId;
@@ -458,22 +536,22 @@ export default {
         .finally(() => this.removeProcess(process));
     },
     getUsers() {
-      Dataset.getUsers(this.dataset.id)
-        .then(response => {
-          this.users = response.data
-        });
+      Dataset.getUsers(this.dataset.id).then(response => {
+        this.users = response.data;
+      });
+    },
+    downloadExport(id) {
+      Export.download(id, this.dataset.name);
     },
     getExports() {
-      Dataset.getExports(this.dataset.id)
-        .then(response => {
-          this.datasetExports = response.data
-        });
+      Dataset.getExports(this.dataset.id).then(response => {
+        this.datasetExports = response.data;
+      });
     },
     getStats() {
-      Dataset.getStats(this.dataset.id)
-        .then(response => {
-          this.stats = response.data;
-        });
+      Dataset.getStats(this.dataset.id).then(response => {
+        this.stats = response.data;
+      });
     },
     createScanTask() {
       if (this.scan.id != null) {
@@ -494,13 +572,16 @@ export default {
         })
         .finally(() => this.removeProcess(process));
     },
-    exportCOCO() {
+    exportModal() {
       if (this.exporting.id != null) {
         this.$router.push({ path: "/tasks", query: { id: this.exporting.id } });
         return;
       }
-
-      Dataset.exportingCOCO(this.dataset.id)
+      $("#exportDataset").modal("show");
+    },
+    exportCOCO() {
+      $("#exportDataset").modal("hide");
+      Dataset.exportingCOCO(this.dataset.id, this.exporting.categories)
         .then(response => {
           let id = response.data.id;
           this.exporting.id = id;
@@ -546,7 +627,8 @@ export default {
       if (this.sidebar.canResize) {
         event.preventDefault();
         let max = window.innerWidth * 0.5;
-        this.sidebar.width = Math.min(Math.max(event.x, 200), max);
+        this.sidebar.width = Math.min(Math.max(event.x, 150), max);
+        localStorage.setItem("dataset/sideWidth", this.sidebar.width)
       }
     },
     startDrag() {
@@ -567,6 +649,11 @@ export default {
       if (!showAnnotated && !showNotAnnotated) return " ";
 
       return showAnnotated;
+    },
+    categoryTags() {
+      let tags = {};
+      this.categories.forEach(c => tags[c.id] = c.name);
+      return tags;
     }
   },
   sockets: {
@@ -603,10 +690,14 @@ export default {
   },
   watch: {
     tab(tab) {
-      localStorage.setItem('dataset/tab', tab);
-      if (tab == 'members') this.getUsers();
-      if (tab == 'statistics') this.getStats();
-      if (tab == 'exports') this.getExports();
+      localStorage.setItem("dataset/tab", tab);
+      if (tab == "members") this.getUsers();
+      if (tab == "statistics") this.getStats();
+      if (tab == "exports") this.getExports();
+    },
+    order(order) {
+      localStorage.setItem("dataset/order", order);
+      this.updatePage();
     },
     queryAnnotated() {
       this.updatePage();
@@ -645,6 +736,8 @@ export default {
         setTimeout(() => {
           this.exporting.progress = 0;
           this.exporting.id = null;
+
+          this.getExports();
         }, 1000);
       }
     }
@@ -654,8 +747,13 @@ export default {
     this.updatePage();
   },
   created() {
-    this.sidebar.width = window.innerWidth * 0.2;
-    if (this.sidebar.width < 90) this.sidebar.width = 0;
+    let tab = localStorage.getItem("dataset/tab");
+    let order = localStorage.getItem("dataset/order");
+    let sideWidth = localStorage.getItem("dataset/sideWidth");
+    
+    if (sideWidth !== null) this.sidebar.width = parseInt(sideWidth);
+    if (tab !== null) this.tab = tab;
+    if (order !== null) this.order = order;
 
     this.dataset.id = parseInt(this.identifier);
     this.updatePage();
@@ -663,10 +761,6 @@ export default {
   mounted() {
     window.addEventListener("mouseup", this.stopDrag);
     window.addEventListener("mousedown", this.startDrag);
-
-    let tab = localStorage.getItem('dataset/tab');
-    if (tab !== null)
-      this.tab = tab;
   },
   destroyed() {
     window.removeEventListener("mouseup", this.stopDrag);

@@ -29,16 +29,10 @@ class DatasetModel(DynamicDocument):
     def save(self, *args, **kwargs):
 
         directory = os.path.join(Config.DATASET_DIRECTORY, self.name + '/')
-
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        os.makedirs(directory, mode=0o777, exist_ok=True)
 
         self.directory = directory
-
-        if current_user:
-            self.owner = current_user.username
-        else:
-            self.owner = 'system'
+        self.owner = current_user.username if current_user else 'system'
 
         return super(DatasetModel, self).save(*args, **kwargs)
 
@@ -48,7 +42,8 @@ class DatasetModel(DynamicDocument):
         members = self.users
         members.append(self.owner)
 
-        return UserModel.objects(username__in=members).exclude('password', 'id', 'preferences')
+        return UserModel.objects(username__in=members)\
+            .exclude('password', 'id', 'preferences')
 
     def import_coco(self, coco_json):
 
@@ -69,9 +64,12 @@ class DatasetModel(DynamicDocument):
             "name": task.name
         }
 
-    def export_coco(self, style="COCO"):
+    def export_coco(self, categories=None, style="COCO"):
 
         from workers.tasks import export_annotations
+
+        if categories is None or len(categories) == 0:
+            categories = self.categories
 
         task = TaskModel(
             name=f"Exporting {self.name} into {style} format",
@@ -80,7 +78,7 @@ class DatasetModel(DynamicDocument):
         )
         task.save()
 
-        cel_task = export_annotations.delay(task.id, self.id)
+        cel_task = export_annotations.delay(task.id, self.id, categories)
 
         return {
             "celery_id": cel_task.id,
