@@ -18,6 +18,9 @@ create_annotation.add_argument('segmentation', type=list, location='json')
 create_annotation.add_argument('keypoints', type=list, location='json')
 create_annotation.add_argument('color', location='json')
 
+data = reqparse.RequestParser()
+data.add_argument('category_id', type=int, required=True)
+
 
 @api.route('/')
 class Annotation(Resource):
@@ -80,6 +83,25 @@ class AnnotationId(Resource):
         image.flag_thumbnail()
 
         annotation.update(set__deleted=True, set__deleted_date=datetime.datetime.now())
+        return {'success': True}
+
+@api.route('/<int:annotation_id>/update')
+class AnnotationUpdate(Resource):
+
+    @api.expect(data)
+    @login_required
+    def get(self, annotation_id):
+        """ Returns annotation by ID """
+
+        args = data.parse_args()
+        category_id = args['category_id']
+        annotation = current_user.annotations.filter(id=annotation_id).first()
+
+        if annotation is None:
+            return {"message": "Invalid annotation id"}, 400
+        
+        annotation.update(category_id=category_id)
+
         return {'success': True}
 
 

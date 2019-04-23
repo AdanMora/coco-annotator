@@ -64,6 +64,7 @@
         :search="search"
         :key="annotation.id"
         :simplify="simplify"
+        :categories="categories"
         :annotation="annotation"
         :current="current.annotation"
         @click="onAnnotationClick(listIndex)"
@@ -76,6 +77,7 @@
         :active-tool="activeTool"
         :scale="scale"
         @deleted="annotationDeleted"
+        @updated="categoryUpdated"
       />
       
     </ul>
@@ -180,6 +182,10 @@ export default {
     },
     activeTool: {
       type: String,
+      required: true
+    },
+    categories:{
+      type: Array,
       required: true
     }
   },
@@ -385,6 +391,9 @@ export default {
       this.$emit("click", indices);
 
       if (this.category.annotations.length === 0) this.isVisible = false;
+    },
+    categoryUpdated() {
+      this.$emit('updated');
     }
   },
   computed: {

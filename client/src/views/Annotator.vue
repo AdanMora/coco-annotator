@@ -129,9 +129,11 @@
             :hover="hover"
             :index="index"
             @click="onCategoryClick"
+            @updated="categoryUpdated"
             :current="current"
             :active-tool="activeTool"
             :scale="image.scale"
+            :categories="categories"
             ref="category"
           />
         </div>
@@ -763,8 +765,34 @@ export default {
       if (index > -1) {
         this.annotating.splice(index, 1);
       }
-    }
-  },
+    },
+    categoryUpdated() {
+      this.initCanvas();
+      let process = "Loading annotation data";
+      this.addProcess(process);
+      this.loading.data = true;
+      axios
+        .get("/api/annotator/update/" + this.image.id)
+        .then(response => {
+          let data = response.data;
+
+          this.loading.data = false;
+          this.categories = data.categories;
+
+          this.$nextTick(() => {
+            this.showAll();
+          });
+        })
+        .catch(() => {
+          this.axiosReqestError(
+            "Could not find requested image",
+            "Redirecting to previous page."
+          );
+          this.$router.go(-1);
+        })
+        .finally(() => this.removeProcess(process));
+      }
+    },
   watch: {
     doneLoading(done) {
       if (done) {

@@ -149,6 +149,13 @@
                 </div>
               </div>
 
+              <div class="form-group row">
+                <label class="col-sm-3 col-form-label">{{flag_category}}</label>
+                <select v-model="category" class="col-sm-8 form-control">
+                  <option :key="option.value" v-for="option in categoryTags" :value="option.value" :selected="category">{{ option.text }} </option>
+                </select>
+              </div>
+
               <Metadata
                 :metadata="annotation.metadata"
                 ref="metadata"
@@ -160,6 +167,7 @@
             <button
               type="button"
               class="btn btn-secondary"
+              @click="checkUpdate"
               data-dismiss="modal"
             >
               Close
@@ -184,6 +192,8 @@ import UndoAction from "@/undo";
 import TagsInput from "@/components/TagsInput";
 import Metadata from "@/components/Metadata";
 
+import Annotations from "@/models/annotations";
+
 let $ = JQuery;
 
 export default {
@@ -193,6 +203,10 @@ export default {
     TagsInput
   },
   props: {
+    categories:{
+      type: Array,
+      required: true
+    },
     annotation: {
       type: Object,
       required: true
@@ -242,6 +256,8 @@ export default {
     return {
       isVisible: true,
       color: this.annotation.color,
+      category: this.annotation.category_id,
+      flag_category: null,
       compoundPath: null,
       keypoints: null,
       metadata: [],
@@ -377,6 +393,11 @@ export default {
 
         this.$emit("deleted", this.index);
       });
+    },
+    checkUpdate() {
+      if (this.annotation.category_id != this.category) {
+        this.$emit('updated');
+      }
     },
     delete() {
       this.$parent.category.annotations.splice(this.index, 1);
@@ -635,6 +656,16 @@ export default {
     }
   },
   watch: {
+    category() {
+      if (this.annotation.category_id != this.category) {
+        // this.flag_category = this.category;
+        Annotations.update(this.annotation.id, {'category_id': this.category})
+        .then(() => {
+          this.flag_category = this.category;
+          // this.$emit('updated');
+        });
+      }
+    },
     activeTool(tool) {
       if (this.isCurrent) {
         this.session.tools.push(tool);
@@ -708,6 +739,14 @@ export default {
     }
   },
   computed: {
+    categoryTags() {
+      let tags = [];
+      this.categories.forEach(category => {
+        tags.push({'text': category.name,
+                   'value': category.id});
+      });
+      return tags;
+    },
     categoryIndex() {
       return this.$parent.index;
     },

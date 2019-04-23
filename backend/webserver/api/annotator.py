@@ -190,4 +190,43 @@ class AnnotatorId(Resource):
 
         return data
 
+@api.route('/update/<int:image_id>')
+class AnnotatorUpdate(Resource):
+
+    @profile
+    @login_required
+    def get(self, image_id):
+        """ Called when loading from the annotator client """
+        image = ImageModel.objects(id=image_id)\
+            .exclude('events').first()
+
+        if image is None:
+            return {'success': False, 'message': 'Could not load image'}, 400
+
+        dataset = current_user.datasets.filter(id=image.dataset_id).first()
+        if dataset is None:
+            return {'success': False, 'message': 'Could not find associated dataset'}, 400
+
+        categories = CategoryModel.objects(deleted=False)\
+            .in_bulk(dataset.categories).items()
+
+        # Generate data about the image to return to client
+        data = {
+            'categories': []
+        }
+
+        for category in categories:
+            category = query_util.fix_ids(category[1])
+
+            category_id = category.get('id')
+            annotations = AnnotationModel.objects(image_id=image_id, category_id=category_id, deleted=False)\
+                .exclude('events').all()
+
+            category['show'] = True
+            category['visualize'] = False
+            category['annotations'] = [] if annotations is None else query_util.fix_ids(annotations)
+            data.get('categories').append(category)
+
+        return data
+
 

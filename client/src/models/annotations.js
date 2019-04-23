@@ -8,5 +8,12 @@ export default {
   },
   delete(id) {
     return axios.delete(`${baseURL}${id}`);
+  },
+  update(id, params) {
+    return axios.get(`${baseURL}/${id}/update`, {
+      params: {
+        ...params
+      }
+    });
   }
 };
