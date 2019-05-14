@@ -9,7 +9,8 @@ export default {
         disabled: "gray"
       },
       iconColor: "",
-      delay: 400
+      delay: 400,
+      font: '24px'
     };
   },
   methods: {

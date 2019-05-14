@@ -11,8 +11,8 @@ from .annotations import AnnotationModel
 
 class ImageModel(DynamicDocument):
 
-    COCO_PROPERTIES = ["id", "width", "height", "file_name", "path", "license",\
-                       "flickr_url", "coco_url", "date_captured", "dataset_id"]
+    COCO_PROPERTIES = ["id", "width", "height", "file_name", "path", "license",
+                        "flickr_url", "coco_url", "date_captured", "dataset_id", "metadata"]
 
     # -- Contants
     THUMBNAIL_DIRECTORY = '.thumbnail'
@@ -42,7 +42,7 @@ class ImageModel(DynamicDocument):
     coco_url = StringField()
     date_captured = DateTimeField()
 
-    metadata = DictField()
+    metadata = DictField(default={})
     license = IntField()
 
     deleted = BooleanField(default=False)

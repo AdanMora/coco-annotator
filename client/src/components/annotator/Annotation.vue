@@ -150,7 +150,7 @@
               </div>
 
               <div class="form-group row">
-                <label class="col-sm-3 col-form-label">{{flag_category}}</label>
+                <label class="col-sm-3 col-form-label">Category</label>
                 <select v-model="category" class="col-sm-8 form-control">
                   <option :key="option.value" v-for="option in categoryTags" :value="option.value" :selected="category">{{ option.text }} </option>
                 </select>

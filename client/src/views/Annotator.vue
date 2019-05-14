@@ -41,7 +41,7 @@
           ref="eraser"
         />
 
-        <KeypointTool
+        <!-- <KeypointTool
           v-model="activeTool"
           @setcursor="setCursor"
           ref="keypoint"
@@ -51,7 +51,7 @@
           :scale="image.scale"
           @setcursor="setCursor"
           ref="dextr"
-        />
+        /> -->
       </div>
       <hr />
 
@@ -80,6 +80,10 @@
         :metadata="image.metadata"
         :commands="commands"
         ref="settings"
+      />
+      <LockButton
+        :metadata="image.metadata"
+        ref="lock"
       />
 
       <hr />
@@ -239,6 +243,7 @@ import UndoButton from "@/components/annotator/tools/UndoButton";
 import ShowAllButton from "@/components/annotator/tools/ShowAllButton";
 import HideAllButton from "@/components/annotator/tools/HideAllButton";
 import AnnotateButton from "@/components/annotator/tools/AnnotateButton";
+import LockButton from "@/components/annotator/tools/MetadataLock";
 
 import PolygonPanel from "@/components/annotator/panels/PolygonPanel";
 import SelectPanel from "@/components/annotator/panels/SelectPanel";
@@ -267,6 +272,7 @@ export default {
     DownloadButton,
     SaveButton,
     SettingsButton,
+    LockButton,
     DeleteButton,
     CenterButton,
     SelectPanel,
@@ -364,7 +370,8 @@ export default {
         dataset: this.dataset,
         image: {
           id: this.image.id,
-          metadata: this.$refs.settings.exportMetadata(),
+          // metadata: this.$refs.settings.exportMetadata(),
+          metadata: this.$refs.lock.exportMetadata(),
           settings: {
             selectedLayers: this.current
           },
@@ -458,6 +465,9 @@ export default {
       let a = p.subtract(pc.multiply(beta)).subtract(c);
 
       return { zoom: zoom, offset: a };
+    },
+    updateMetadata(){
+      this.image.metadata = this.$refs.lock.exportMetadata();
     },
 
     initCanvas() {
@@ -947,11 +957,12 @@ export default {
 
 .left-panel {
   background-color: #4b5162;
-  width: 40px;
+  width: 80px;
   padding-top: 40px;
   float: left;
   height: 100%;
   box-shadow: 5px 10px;
+  font-size: 19px;
 }
 
 .right-panel {

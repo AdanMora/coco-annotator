@@ -120,6 +120,7 @@ export default {
   },
   watch: {
     metadata() {
+      this.metadataList = [];
       this.loadMetadata();
     }
   },

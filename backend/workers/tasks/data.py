@@ -18,6 +18,15 @@ import os
 from celery import shared_task
 from ..socket import create_socket
 
+CATEGORY_MAPPING = {
+    '7': 1,   # mais
+    '8': 5,   # haricot
+    '9': 2,   # moutarde
+    '10': 3,  # matricaire
+    '11': 4,  # chenopode
+    '12': 6   # raygrass
+}
+
 
 @shared_task
 def export_annotations(task_id, dataset_id, categories):
@@ -60,6 +69,9 @@ def export_annotations(task_id, dataset_id, categories):
             if 'keypoint_labels' in category:
                 del category['keypoint_labels']
 
+        id_category = category.get('id')
+        category['id'] = CATEGORY_MAPPING.get(str(id_category))
+
         task.info(f"Adding category: {category.get('name')}")
         coco.get('categories').append(category)
         category_names.append(category.get('name'))
@@ -71,33 +83,39 @@ def export_annotations(task_id, dataset_id, categories):
     total_images = db_images.count()
     for image in fix_ids(db_images):
 
-        progress += 1
-        task.set_progress((progress/total_items)*100, socket=socket)  
+        metadata = image.get('metadata')
+        if 'lock' in metadata and metadata['lock']:
+            task.info(f"METADATA {metadata}")
 
-        annotations = db_annotations.filter(image_id=image.get('id'))\
-            .only(*AnnotationModel.COCO_PROPERTIES)
-        annotations = fix_ids(annotations)
-        num_annotations = 0
-        for annotation in annotations:
+            progress += 1
+            task.set_progress((progress/total_items)*100, socket=socket)  
 
-            has_keypoints = len(annotation.get('keypoints', [])) > 0
-            has_segmentation = len(annotation.get('segmentation', [])) > 0
+            annotations = db_annotations.filter(image_id=image.get('id'))\
+                .only(*AnnotationModel.COCO_PROPERTIES)
+            annotations = fix_ids(annotations)
+            num_annotations = 0
+            for annotation in annotations:
 
-            if has_keypoints or has_segmentation:
+                has_keypoints = len(annotation.get('keypoints', [])) > 0
+                has_segmentation = len(annotation.get('segmentation', [])) > 0
 
-                if not has_keypoints:
-                    if 'keypoints' in annotation:
-                        del annotation['keypoints']
-                else:
-                    arr = np.array(annotation.get('keypoints', []))
-                    arr = arr[2::3]
-                    annotation['num_keypoints'] = len(arr[arr > 0])
-                
-                num_annotations += 1
-                coco.get('annotations').append(annotation)
-                
-        task.info(f"Exporting {num_annotations} annotations for image {image.get('id')}")
-        coco.get('images').append(image)
+                if has_keypoints or has_segmentation:
+
+                    if not has_keypoints:
+                        if 'keypoints' in annotation:
+                            del annotation['keypoints']
+                    else:
+                        arr = np.array(annotation.get('keypoints', []))
+                        arr = arr[2::3]
+                        annotation['num_keypoints'] = len(arr[arr > 0])
+                    
+                    num_annotations += 1
+                    id_category = annotation.get('category_id')
+                    annotation['category_id'] = CATEGORY_MAPPING.get(str(id_category))
+                    coco.get('annotations').append(annotation)
+                    
+            task.info(f"Exporting {num_annotations} annotations for image {image.get('id')}")
+            coco.get('images').append(image)
     
     task.info(f"Done export {total_annotations} annotations and {total_images} images from {dataset.name}")
 
