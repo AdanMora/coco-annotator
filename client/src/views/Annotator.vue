@@ -777,6 +777,7 @@ export default {
       }
     },
     categoryUpdated() {
+      this.save();
       this.initCanvas();
       let process = "Loading annotation data";
       this.addProcess(process);

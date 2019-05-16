@@ -229,6 +229,11 @@ def import_annotations(task_id, dataset_id, coco_json):
         images_id[image_id] = image_model
         categories_by_image[image_id] = list()
 
+        metadata = image.get('metadata', {})
+
+        image_model.update(
+            set__metadata=metadata)
+
     task.info("===== Import Annotations =====")
     for annotation in coco_annotations:
 
