@@ -119,7 +119,9 @@ export default {
     openAnnotator() {
       this.$router.push({
         name: "annotate",
-        params: { identifier: this.image.id }
+        params: { identifier: this.image.id,
+                  folders: this.$parent.folders.join("/"),
+                  order: this.$parent.order }
       });
     },
     onDownloadClick() {

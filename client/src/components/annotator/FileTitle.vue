@@ -44,13 +44,18 @@ export default {
      *
      * @param {Number} identifer id of a file
      */
-    route(identifier) {
+    route(image_id) {
       // Make sure we pop the latest session before annotations
       this.$parent.current.annotation = -1;
 
       this.$nextTick(() => {
         this.$parent.save(() => {
-          this.$router.push({ name: "annotate", params: { identifier } });
+          this.$router.push({
+            name: "annotate",
+            params: { identifier: image_id,
+                      folders: this.$parent.folders,
+                      order: this.$parent.order }
+          });
         });
       });
     }

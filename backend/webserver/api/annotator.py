@@ -1,8 +1,10 @@
 import datetime
 
-from flask_restplus import Namespace, Resource
+from flask_restplus import Namespace, Resource, reqparse
 from flask_login import login_required, current_user
 from flask import request
+
+import os
 
 from ..util import query_util, coco_util, profile
 
@@ -15,6 +17,10 @@ from database import (
 )
 
 api = Namespace('annotator', description='Annotator related operations')
+
+folder_data = reqparse.RequestParser()
+folder_data.add_argument('folder', default='', help='Folder for data')
+folder_data.add_argument('order', default='file_name', help='Order to display images')
 
 
 @api.route('/data')
@@ -136,9 +142,15 @@ class AnnotatorData(Resource):
 class AnnotatorId(Resource):
 
     @profile
+    @api.expect(folder_data)
     @login_required
     def get(self, image_id):
         """ Called when loading from the annotator client """
+
+        data = folder_data.parse_args()
+        folder = data.get('folder')
+        order = data.get('order')
+
         image = ImageModel.objects(id=image_id)\
             .exclude('events').first()
 
@@ -152,10 +164,26 @@ class AnnotatorId(Resource):
         categories = CategoryModel.objects(deleted=False)\
             .in_bulk(dataset.categories).items()
 
+        if len(folder) > 0:
+            folder = folder[0].strip('/') + folder[1:]
+            if folder[-1] != '/':
+                folder = folder + '/'
+        else:
+            folder = ''
+
+        # Get directory
+        directory = os.path.join(dataset.directory, folder)
+        if not os.path.exists(directory):
+            return {'message': 'Directory does not exist.'}, 400
+
         # Get next and previous image
-        images = ImageModel.objects(dataset_id=dataset.id, deleted=False)
-        pre = images.filter(file_name__lt=image.file_name).order_by('-file_name').first()
-        nex = images.filter(file_name__gt=image.file_name).order_by('file_name').first()
+        # images = ImageModel.objects(dataset_id=dataset.id, deleted=False)
+        # pre = images.filter(file_name__lt=image.file_name).order_by('-file_name').first()
+        # nex = images.filter(file_name__gt=image.file_name).order_by('file_name').first()
+
+        images = ImageModel.objects(dataset_id=dataset.id, deleted=False, path__startswith=directory)
+        pre = images.filter(file_name__lt=image.file_name).order_by('-' + order).first()
+        nex = images.filter(file_name__gt=image.file_name).order_by(order).first()
 
         preferences = {}
         if not Config.LOGIN_DISABLED:

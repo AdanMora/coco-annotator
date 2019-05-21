@@ -253,6 +253,8 @@ import EraserPanel from "@/components/annotator/panels/EraserPanel";
 import KeypointPanel from "@/components/annotator/panels/KeypointPanel";
 import DEXTRPanel from "@/components/annotator/panels/DEXTRPanel";
 
+import Anotator from "@/models/anotator";
+
 import { mapMutations } from "vuex";
 
 export default {
@@ -292,6 +294,14 @@ export default {
   props: {
     identifier: {
       type: [Number, String],
+      required: true
+    },
+    folders: {
+      type: String,
+      required: true
+    },
+    order: {
+      type: String,
       required: true
     }
   },
@@ -536,8 +546,10 @@ export default {
       let process = "Loading annotation data";
       this.addProcess(process);
       this.loading.data = true;
-      axios
-        .get("/api/annotator/data/" + this.image.id)
+      Anotator.getData(this.image.id, {
+        folder: this.folders,
+        order: this.order
+      })
         .then(response => {
           let data = response.data;
 

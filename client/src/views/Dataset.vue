@@ -532,6 +532,7 @@ export default {
         })
         .catch(error => {
           this.axiosReqestError("Loading Dataset", error.response.data.message);
+          this.folders = [];
         })
         .finally(() => this.removeProcess(process));
     },
@@ -703,6 +704,7 @@ export default {
       this.updatePage();
     },
     folders() {
+      localStorage.setItem("folders", JSON.stringify(this.folders));
       this.updatePage();
     },
     "sidebar.drag"(canDrag) {
@@ -750,10 +752,13 @@ export default {
     let tab = localStorage.getItem("dataset/tab");
     let order = localStorage.getItem("dataset/order");
     let sideWidth = localStorage.getItem("dataset/sideWidth");
+    let f = localStorage.getItem("folders");
+    let folders = JSON.parse(f);
     
     if (sideWidth !== null) this.sidebar.width = parseInt(sideWidth);
     if (tab !== null) this.tab = tab;
     if (order !== null) this.order = order;
+    if (folders !== null) this.folders = folders;
 
     this.dataset.id = parseInt(this.identifier);
     this.updatePage();
