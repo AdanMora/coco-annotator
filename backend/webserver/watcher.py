@@ -6,6 +6,7 @@ from database import ImageModel
 
 import re
 
+from .util import active_controller
 
 class ImageFolderHandler(FileSystemEventHandler):
 
@@ -33,6 +34,7 @@ class ImageFolderHandler(FileSystemEventHandler):
         if image is None and event.event_type != 'deleted':
             self._log(f'Adding new file to database: {path}')
             ImageModel.create_from_path(path).save()
+            active_controller.insert_image(path)
 
         elif event.event_type == 'moved':
             self._log(f'Moving image from {event.src_path} to {path}')

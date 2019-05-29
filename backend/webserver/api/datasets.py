@@ -9,6 +9,7 @@ from google_images_download import google_images_download as gid
 
 from ..util.pagination_util import Pagination
 from ..util import query_util, coco_util, profile
+from ..util import active_controller
 
 from database import (
     ImageModel,
@@ -21,6 +22,7 @@ from database import (
 import datetime
 import json
 import os
+import sys
 
 api = Namespace('dataset', description='Dataset related operations')
 
@@ -29,6 +31,9 @@ dataset_create = reqparse.RequestParser()
 dataset_create.add_argument('name', required=True)
 dataset_create.add_argument('categories', type=list, required=False, location='json',
                             help="List of default categories for sub images")
+
+dataset_change = reqparse.RequestParser()
+dataset_change.add_argument('dataset_id', required=True)
 
 page_data = reqparse.RequestParser()
 page_data.add_argument('page', default=1, type=int)
@@ -76,14 +81,29 @@ class Dataset(Resource):
         categories = args.get('categories', [])
 
         category_ids = CategoryModel.bulk_create(categories)
-
         try:
             dataset = DatasetModel(name=name, categories=category_ids)
             dataset.save()
+            db_categories = CategoryModel.objects(id__in=category_ids, deleted=False) \
+            .only(*CategoryModel.COCO_PROPERTIES_MAIN)
+            active_controller.init_dataset(name, db_categories)
         except NotUniqueError:
             return {'message': 'Dataset already exists. Check the undo tab to fully delete the dataset.'}, 400
 
         return query_util.fix_ids(dataset)
+    
+    @api.expect(dataset_change)
+    @login_required
+    def put(self):
+        """ Change a dataset on Active learning System"""
+        args = dataset_change.parse_args()
+        dataset_id = args['dataset_id']
+        dataset = current_user.datasets.filter(id=dataset_id, deleted=False).first()
+        if dataset is None:
+            return {"message": "Invalid dataset id"}, 400
+        active_controller.change_dataset(dataset.name)
+
+        return {"success": True}
 
 
 def download_images(output_dir, args):
@@ -502,4 +522,38 @@ class DatasetScan(Resource):
             return {'message': 'Invalid dataset ID'}, 400
         
         return dataset.scan()
+
+@api.route('/<int:dataset_id>/predict')
+class DatasetPredict(Resource):
+    
+    @login_required
+    def get(self, dataset_id):
+        """ Get predictions from DB """
+        dataset = DatasetModel.objects(id=dataset_id).first()
+        dataset.clean_annotations()
+        try:
+            json_data = active_controller.get_predictions()
+        except:
+            return {'message': sys.exc_info()[0]}, 400
+        return dataset.import_coco(json_data)
+
+    @login_required
+    def post(self, dataset_id):
+        """ Make new predictions on dataset """
+        try:
+            active_controller.make_predictions()
+        except:
+            return {'message': sys.exc_info()[0]}, 400
+        return {'success': True}
+    
+    @login_required
+    def put(self, dataset_id):
+        """ Updates annotatations and images on DB."""
+        dataset = DatasetModel.objects(id=dataset_id).first()
+        annotations = dataset.get_locked_annotations()
+        try:
+            active_controller.update_annotations(annotations)
+        except:
+            return {'message': sys.exc_info()[0]}, 400
+        return {'success': True}
 

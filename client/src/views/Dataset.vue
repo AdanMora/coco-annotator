@@ -224,6 +224,14 @@
           </div>
           <div v-else>Export COCO</div>
         </button>
+
+        <button
+          type="button"
+          class="btn btn-info btn-block"
+          @click="makePredictions"
+        >
+          <div>Make Predictions</div>
+        </button>
       </div>
       <hr>
       <h6 class="sidebar-title text-center">Subdirectories</h6>
@@ -536,6 +544,15 @@ export default {
         })
         .finally(() => this.removeProcess(process));
     },
+    makePredictions() {
+      Dataset.updateAnnotationsDB(this.dataset.id)
+      .then(response => {
+        Dataset.makePredictions(this.dataset.id)
+        .then(response => {
+          Dataset.getPredictions(this.dataset.id);
+        });
+      });
+    },
     getUsers() {
       Dataset.getUsers(this.dataset.id).then(response => {
         this.users = response.data;
@@ -704,7 +721,7 @@ export default {
       this.updatePage();
     },
     folders() {
-      localStorage.setItem("folders", JSON.stringify(this.folders));
+      localStorage.setItem("dataset/folders", JSON.stringify(this.folders));
       this.updatePage();
     },
     "sidebar.drag"(canDrag) {
@@ -752,7 +769,7 @@ export default {
     let tab = localStorage.getItem("dataset/tab");
     let order = localStorage.getItem("dataset/order");
     let sideWidth = localStorage.getItem("dataset/sideWidth");
-    let f = localStorage.getItem("folders");
+    let f = localStorage.getItem("dataset/folders");
     let folders = JSON.parse(f);
     
     if (sideWidth !== null) this.sidebar.width = parseInt(sideWidth);
@@ -762,6 +779,13 @@ export default {
 
     this.dataset.id = parseInt(this.identifier);
     this.updatePage();
+    Dataset.change(this.dataset.id)
+    .catch(error => {
+      this.axiosReqestError(
+        "Changing Dataset",
+        error.response.data.message
+      );
+    });
   },
   mounted() {
     window.addEventListener("mouseup", this.stopDrag);

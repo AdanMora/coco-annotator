@@ -12,7 +12,10 @@ class AnnotationModel(DynamicDocument):
 
     COCO_PROPERTIES = ["id", "image_id", "category_id", "segmentation", \
                        "iscrowd", "color", "area", "bbox", "metadata", \
-                       "keypoints"]
+                      "keypoints"]
+
+    COCO_PROPERTIES_DB = ["id", "image_id", "category_id", "segmentation", \
+                             "area", "bbox", "metadata", "iscrowd", "width", "height"]
 
     id = SequenceField(primary_key=True)
     image_id = IntField(required=True)

@@ -22,6 +22,9 @@ export default {
       categories: categories
     });
   },
+  change(dataset_id) {
+    return axios.put(`${baseURL}/?dataset_id=${dataset_id}`);
+  },
   generate(id, body) {
     return axios.post(`${baseURL}/${id}/generate`, {
       ...body
@@ -57,5 +60,14 @@ export default {
   },
   getExports(id) {
     return axios.get(`${baseURL}/${id}/exports`);
+  },
+  getPredictions(id) {
+    return axios.get(`${baseURL}/${id}/predict`);
+  },
+  makePredictions(id) {
+    return axios.post(`${baseURL}/${id}/predict`);
+  },
+  updateAnnotationsDB(id) {
+    return axios.put(`${baseURL}/${id}/predict`);
   }
 };

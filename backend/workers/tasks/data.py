@@ -85,7 +85,6 @@ def export_annotations(task_id, dataset_id, categories):
 
         metadata = image.get('metadata')
         if 'lock' in metadata and metadata['lock']:
-            task.info(f"METADATA {metadata}")
 
             progress += 1
             task.set_progress((progress/total_items)*100, socket=socket)  
@@ -189,6 +188,11 @@ def import_annotations(task_id, dataset_id, coco_json):
 
             category_model = new_category
             dataset.categories.append(new_category.id)
+        
+        metadata = category.get('metadata', {})
+        
+        category_model.update(
+            set__metadata=metadata)
 
         task.info(f"{category_name} category found")
         # map category ids
@@ -245,6 +249,9 @@ def import_annotations(task_id, dataset_id, coco_json):
         area = annotation.get('area', 0)
         bbox = annotation.get('bbox', [0, 0, 0, 0])
 
+        metadata_annotation = annotation.get('metadata', {})
+        metadata_annotation['id_db'] = annotation.get('id')
+
         progress += 1
         task.set_progress((progress/total_items)*100, socket=socket)
 
@@ -276,7 +283,7 @@ def import_annotations(task_id, dataset_id, coco_json):
             annotation_model.category_id = category_model_id
 
             annotation_model.color = annotation.get('color')
-            annotation_model.metadata = annotation.get('metadata', {})
+            annotation_model.metadata = metadata_annotation
 
             if has_segmentation:
                 annotation_model.segmentation = segmentation
@@ -290,7 +297,7 @@ def import_annotations(task_id, dataset_id, coco_json):
 
             image_categories.append(category_id)
         else:
-            annotation_model.update(deleted=False)
+            annotation_model.update(deleted=False,metadata=metadata_annotation)
             task.info(f"Annotation already exists (i:{image_id}, c:{category_id})")
 
     for image_id in images_id:

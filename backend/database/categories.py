@@ -10,6 +10,8 @@ class CategoryModel(DynamicDocument):
     COCO_PROPERTIES = ["id", "name", "supercategory", "color", "metadata",\
                        "keypoint_edges", "keypoint_labels"]
 
+    COCO_PROPERTIES_MAIN = ["id", "name", "supercategory", "metadata"]
+
     id = SequenceField(primary_key=True)
     name = StringField(required=True, unique_with=['creator'])
     supercategory = StringField(default='')

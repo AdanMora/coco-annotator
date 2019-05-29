@@ -25,7 +25,7 @@
         @click="onAnnotationClick"
         :style="{
           float: 'left',
-          width: '70%',
+          width: '60%',
           color: isVisible ? 'white' : 'gray'
         }"
       >
@@ -48,6 +48,12 @@
       <i
         @click="deleteAnnotation"
         class="fa fa-trash-o annotation-icon"
+        style="float:right"
+      />
+      
+      <i
+        @click="lockAnnotation"
+        :class="lockIcon"
         style="float:right"
       />
     </li>
@@ -281,7 +287,8 @@ export default {
         tools: [],
         milliseconds: 0
       },
-      tagRecomputeCounter: 0
+      tagRecomputeCounter: 0,
+      isLocked: false
     };
   },
   methods: {
@@ -394,9 +401,39 @@ export default {
         this.$emit("deleted", this.index);
       });
     },
+    loadMetadata() {
+      if (this.annotation.metadata != null) {
+        if (this.annotation.metadata.hasOwnProperty("lock")) {
+          let value = this.annotation.metadata["lock"];
+          if (value == null) value = "";
+          else value = value.toString();
+          if (value) {
+            this.isLocked = true;
+          }
+          else {
+            this.isLocked = false;
+          }
+        }
+        else {
+          this.annotation.metadata["lock"] = false
+          this.isLocked = false;
+
+        }
+      }
+    },
+    lockAnnotation() {
+      if (this.isLocked){
+        this.annotation.metadata["lock"] = false;
+        this.isLocked = false;
+      }
+      else{
+        this.annotation.metadata["lock"] = true;
+        this.isLocked = true;
+      }
+    },
     checkUpdate() {
       if (this.annotation.category_id != this.category) {
-        this.$emit('updated');
+        this.$emit("updated");
       }
     },
     delete() {
@@ -607,6 +644,7 @@ export default {
       if (this.compoundPath == null) this.createCompoundPath();
 
       let metadata = this.$refs.metadata.export();
+      metadata["lock"] = this.annotation.metadata["lock"];
       if (this.name.length > 0) metadata.name = this.name;
       let annotationData = {
         id: this.annotation.id,
@@ -739,11 +777,14 @@ export default {
     }
   },
   computed: {
+    lockIcon() {
+      return this.isLocked ? "fa fa-lock annotation-icon" : "fa fa-unlock annotation-icon";
+    },
     categoryTags() {
       let tags = [];
       this.categories.forEach(category => {
-        tags.push({'text': category.name,
-                   'value': category.id});
+        tags.push({"text": category.name,
+                   "value": category.id});
       });
       return tags;
     },
@@ -844,6 +885,9 @@ export default {
     $(`#keypointSettings${this.annotation.id}`).on("hidden.bs.modal", () => {
       this.currentKeypoint = null;
     });
+  },
+  created() {
+    this.loadMetadata();
   }
 };
 </script>

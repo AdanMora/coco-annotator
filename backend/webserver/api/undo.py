@@ -11,6 +11,8 @@ from database import (
     AnnotationModel
 )
 
+from ..util import active_controller
+
 api = Namespace('undo', description='Undo related operations')
 
 model_list = reqparse.RequestParser()
@@ -103,6 +105,8 @@ class Undo(Resource):
             return {"message": "Instance not found"}, 400
 
         model_object = model_instance.objects(id=model_id).first()
+
+        active_controller.delete_object(model_id, instance)
 
         if model_object is None:
             return {"message": "Invalid id"}, 400

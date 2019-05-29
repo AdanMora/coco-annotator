@@ -6,7 +6,7 @@ from config import Config
 from .tasks import TaskModel
 
 import os
-
+import json
 
 class DatasetModel(DynamicDocument):
     
@@ -44,6 +44,32 @@ class DatasetModel(DynamicDocument):
 
         return UserModel.objects(username__in=members)\
             .exclude('password', 'id', 'preferences')
+
+    def get_locked_annotations(self):
+        from . import fix_ids
+        from .annotations import AnnotationModel
+        from .images import ImageModel
+
+        annotations_locked = []
+        images_db = fix_ids(ImageModel.objects(deleted=False, annotated=True, dataset_id=self.id).only(*ImageModel.COCO_PROPERTIES_DB))
+        for image in images_db:
+            data = {
+                'image_info': image,
+                'annotations': []
+            }
+            annotations_db = fix_ids(AnnotationModel.objects(dataset_id=self.id, image_id=image['id'], deleted=False).only(*AnnotationModel.COCO_PROPERTIES_DB))
+            for annotation in annotations_db:
+                if 'lock' in annotation['metadata'] and annotation['metadata']['lock']:
+                    data['annotations'].append(annotation)
+            
+            annotations_locked.append(data)
+            
+        return annotations_locked
+
+    def clean_annotations(self):
+        from .annotations import AnnotationModel
+
+        AnnotationModel.objects(dataset_id=self.id).delete()
 
     def import_coco(self, coco_json):
 

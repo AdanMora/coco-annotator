@@ -14,6 +14,8 @@ class ImageModel(DynamicDocument):
     COCO_PROPERTIES = ["id", "width", "height", "file_name", "path", "license",
                         "flickr_url", "coco_url", "date_captured", "dataset_id", "metadata"]
 
+    COCO_PROPERTIES_DB = ["id", "width", "height", "file_name", "path", "metadata"]
+
     # -- Contants
     THUMBNAIL_DIRECTORY = '.thumbnail'
     PATTERN = (".gif", ".png", ".jpg", ".jpeg", ".bmp")
