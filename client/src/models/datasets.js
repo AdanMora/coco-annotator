@@ -67,7 +67,7 @@ export default {
   makePredictions(id) {
     return axios.post(`${baseURL}/${id}/predict`);
   },
-  updateAnnotationsDB(id) {
+  updateModel(id) {
     return axios.put(`${baseURL}/${id}/predict`);
   }
 };

@@ -541,7 +541,7 @@ class DatasetPredict(Resource):
     def post(self, dataset_id):
         """ Make new predictions on dataset """
         try:
-            active_controller.make_predictions()
+            active_controller.make_predictions(dataset_id)
         except:
             return {'message': sys.exc_info()[0]}, 400
         return {'success': True}
@@ -549,10 +549,8 @@ class DatasetPredict(Resource):
     @login_required
     def put(self, dataset_id):
         """ Updates annotatations and images on DB."""
-        dataset = DatasetModel.objects(id=dataset_id).first()
-        annotations = dataset.get_locked_annotations()
         try:
-            active_controller.update_annotations(annotations)
+            active_controller.update_model(dataset_id)
         except:
             return {'message': sys.exc_info()[0]}, 400
         return {'success': True}

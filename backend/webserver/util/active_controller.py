@@ -3,7 +3,7 @@ import json
 import yaml
 import os
 
-from database import AnnotationModel, ImageModel, fix_ids
+from database import AnnotationModel, ImageModel, DatasetModel, fix_ids
 
 HEADERS = {'Content-Type': 'application/json', 'Accept':'application/json'}
 
@@ -64,15 +64,22 @@ def delete_object(object_id, instance):
         }
         requests.delete(URL_IMAGE, params=payload)
 
-def make_predictions():
-    requests.post(URL_MODEL, headers=HEADERS)
-
 def get_predictions():
     r = requests.get(URL_MODEL, headers=HEADERS)
     r = r.content.decode('utf8').replace("'", '"')
     data = json.loads(r)
     return data['predictions']
-
-def update_annotations(annotations_to_update):
-    for data in annotations_to_update:
+    
+def update_annotations(dataset_id):
+    dataset = DatasetModel.objects(id=dataset_id).first()
+    annotations = dataset.get_locked_annotations()
+    for data in annotations:
         requests.put(URL_IMAGE, data=json.dumps(data), headers=HEADERS)
+
+def make_predictions(dataset_id):
+    update_annotations(dataset_id)
+    requests.post(URL_MODEL, headers=HEADERS)
+
+def update_model(dataset_id):
+    update_annotations(dataset_id)
+    requests.put(URL_MODEL, headers=HEADERS)

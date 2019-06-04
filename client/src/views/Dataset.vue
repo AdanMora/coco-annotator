@@ -232,6 +232,14 @@
         >
           <div>Make Predictions</div>
         </button>
+
+        <button
+          type="button"
+          class="btn btn-warning btn-block"
+          @click="updateModel"
+        >
+          <div>Update Model</div>
+        </button>
       </div>
       <hr>
       <h6 class="sidebar-title text-center">Subdirectories</h6>
@@ -261,7 +269,15 @@
         <PanelToggle name="Show Annotated" v-model="panel.showAnnotated" />
         <PanelToggle name="Show Not Annotated" v-model="panel.showNotAnnotated" />
         <PanelDropdown name="Order" v-model="order" :values="orderTypes" />
+        <PanelInputNumber
+          name="Limit"
+          min="1"
+          :max="images.length"
+          step="1"
+          v-model="limit_filter"
+        />
       </div>
+      <h6 class="sidebar-title text-center">Limit Filter: {{limit_filter}}</h6>
     </div>
 
     <div class="modal fade" tabindex="-1" role="dialog" id="generateDataset">
@@ -404,6 +420,13 @@
         </div>
       </div>
     </div>
+    <div class="modal fade" id="loadingModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered justify-content-center" role="document">
+        <div class="spinner-border text-light" style="width: 5rem; height: 5rem;" role="status">
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -415,7 +438,9 @@ import ImageCard from "@/components/cards/ImageCard";
 import Pagination from "@/components/Pagination";
 import PanelString from "@/components/PanelInputString";
 import PanelToggle from "@/components/PanelToggle";
-import PanelDropdown from "@/components/PanelInputDropdown"
+import PanelDropdown from "@/components/PanelInputDropdown";
+import PanelInputNumber from "@/components/PanelInputNumber";
+
 import JQuery from "jquery";
 import TagsInput from "@/components/TagsInput";
 
@@ -431,7 +456,8 @@ export default {
     PanelString,
     PanelToggle,
     PanelDropdown,
-    TagsInput
+    TagsInput,
+    PanelInputNumber
   },
   mixins: [toastrs],
   props: {
@@ -442,6 +468,7 @@ export default {
   },
   data() {
     return {
+      limit_filter: 1,
       pages: 1,
       generateLimit: 100,
       limit: 52,
@@ -545,13 +572,34 @@ export default {
         .finally(() => this.removeProcess(process));
     },
     makePredictions() {
-      Dataset.updateAnnotationsDB(this.dataset.id)
+      $("#loadingModal").modal({
+        backdrop: "static", //remove ability to close modal with click
+        keyboard: false, //remove option to close with keyboard
+        show: true //Display loader!
+      });
+      Dataset.makePredictions(this.dataset.id)
       .then(response => {
-        Dataset.makePredictions(this.dataset.id)
+        Dataset.getPredictions(this.dataset.id)
         .then(response => {
-          Dataset.getPredictions(this.dataset.id);
+          setTimeout(function() {
+            $("#loadingModal").modal("hide");
+          }, 1000);
         });
       });
+    },
+    updateModel() {
+      $("#loadingModal").modal({
+        backdrop: "static", //remove ability to close modal with click
+        keyboard: false, //remove option to close with keyboard
+        show: true //Display loader!
+      });
+      Dataset.updateModel(this.dataset.id)
+      .then(response => {
+        setTimeout(function() {
+          $("#loadingModal").modal("hide");
+        }, 1000);
+      });
+      
     },
     getUsers() {
       Dataset.getUsers(this.dataset.id).then(response => {
