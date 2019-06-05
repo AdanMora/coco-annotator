@@ -405,8 +405,6 @@ export default {
       if (this.annotation.metadata != null) {
         if (this.annotation.metadata.hasOwnProperty("lock")) {
           let value = this.annotation.metadata["lock"];
-          if (value == null) value = "";
-          else value = value.toString();
           if (value) {
             this.isLocked = true;
           }
