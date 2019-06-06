@@ -70,16 +70,16 @@ def get_predictions():
     data = json.loads(r)
     return data['predictions']
     
-def update_annotations(dataset_id):
+def update_annotations_to_Arango(dataset_id):
     dataset = DatasetModel.objects(id=dataset_id).first()
     annotations = dataset.get_locked_annotations()
     for data in annotations:
         requests.put(URL_IMAGE, data=json.dumps(data), headers=HEADERS)
 
 def make_predictions(dataset_id):
-    update_annotations(dataset_id)
-    requests.post(URL_MODEL, headers=HEADERS)
+    update_annotations_to_Arango(dataset_id)
+    # requests.post(URL_MODEL, headers=HEADERS)
 
 def update_model(dataset_id):
-    update_annotations(dataset_id)
+    update_annotations_to_Arango(dataset_id)
     requests.put(URL_MODEL, headers=HEADERS)

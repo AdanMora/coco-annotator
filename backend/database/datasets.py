@@ -59,8 +59,8 @@ class DatasetModel(DynamicDocument):
             }
             annotations_db = fix_ids(AnnotationModel.objects(dataset_id=self.id, image_id=image['id'], deleted=False).only(*AnnotationModel.COCO_PROPERTIES_DB))
             for annotation in annotations_db:
-                if 'lock' in annotation['metadata'] and annotation['metadata']['lock']:
-                    data['annotations'].append(annotation)
+                # if 'lock' in annotation['metadata'] and annotation['metadata']['lock']:
+                data['annotations'].append(annotation)
             
             annotations_locked.append(data)
             
